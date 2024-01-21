@@ -67,6 +67,8 @@ func downloadFile(ctx context.Context, chunkSize int, remainder int, errs chan e
 	}()
 
 	fileNames := make([]string, *numberOfChunks)
+	defer cleanupFiles(fileNames, errs)
+
 	for chunk := range chunks {
 		fileNames[chunk.index] = chunk.tempFileName
 		fmt.Printf("Chunk %s downloaded\n", chunk.tempFileName)
@@ -161,12 +163,25 @@ func mergeFiles(fileName string, fileNames []string) error {
 		defer tmpFile.Close()
 
 		_, err = io.Copy(file, tmpFile)
-		err = os.Remove(tmpFileName)
 		if err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func cleanupFiles(files []string, errs chan error) {
+	fmt.Println("Cleaning up temporary files...")
+	for _, file := range files {
+		if file == "" {
+			continue
+		}
+		fmt.Printf("Removing %s\n", file)
+		err := os.Remove(file)
+		if err != nil {
+			errs <- err
+		}
+	}
 }
 
 func generateRandomFileName() string {
