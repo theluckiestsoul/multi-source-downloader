@@ -1,4 +1,4 @@
-module multi-source-downloader
+module github.com/theluckiestsoul/multi-source-downloader
 
 go 1.21.5
 
