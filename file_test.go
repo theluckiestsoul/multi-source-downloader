@@ -120,11 +120,11 @@ func TestGenerateRandomFileName(t *testing.T) {
 		want string
 	}{
 		{
-			name: "Should return a bin file extension",
+			name: "Should return an htm file extension",
 			file: &file{
-				contentType: "application/octet-stream",
+				contentType: "text/html",
 			},
-			want: ".bin",
+			want: ".htm",
 		},
 		{
 			name: "Should return a pdf file extension",
@@ -134,7 +134,7 @@ func TestGenerateRandomFileName(t *testing.T) {
 			want: ".pdf",
 		},
 		{
-			name: "Should return a txt file extension",
+			name: "Should return a json file extension",
 			file: &file{
 				contentType: "application/json",
 			},
