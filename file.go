@@ -157,6 +157,7 @@ func saveChunk(body io.ReadCloser) (string, error) {
 }
 
 func mergeFiles(dst string, src []string) error {
+	fmt.Printf("Merging %d files into %s\n", len(src), dst)
 	file, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
