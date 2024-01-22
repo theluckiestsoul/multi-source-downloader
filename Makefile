@@ -10,3 +10,9 @@ build:
 	go build -o multi-source-downloader
 	@echo "Done!"
 .PHONY: build
+
+test:
+	@echo "Testing..."
+	go test -race -v ./...
+	@echo "Done!"
+.PHONY: test

@@ -10,9 +10,9 @@ import (
 	"time"
 )
 
-
 func main() {
 	start := time.Now()
+	parseFlags()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

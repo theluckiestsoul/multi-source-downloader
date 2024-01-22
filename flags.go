@@ -8,11 +8,11 @@ import (
 )
 
 var (
-	url            = flag.String("url", "https://examplefile.com/file-download/25", "file url to download")
+	url            = flag.String("url", "", "file url to download")
 	numberOfChunks = flag.Int("chunks", 8, "number of chunks to download concurrently")
 )
 
-func init() {
+func parseFlags() {
 	const usage = `Usage of multi-source-downloader %s:
 
     multi-source-downloader [options] -url <file url> -chunks <number of chunks> -verify
