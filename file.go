@@ -90,6 +90,10 @@ func getFileDetails(url string) (*file, error) {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("%s returned status code %d", url, resp.StatusCode)
+	}
+
 	size, err := strconv.Atoi(resp.Header.Get("Content-Length"))
 	if err != nil {
 		return nil, err

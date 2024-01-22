@@ -17,7 +17,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	signalChan := make(chan os.Signal, 1)
+	signalChan := make(chan os.Signal)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
@@ -28,13 +28,7 @@ func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	errs := make(chan error)
-	defer close(errs)
-
-	go func() {
-		for err := range errs {
-			fmt.Println(err.Error())
-		}
-	}()
+	go handleErrors(errs)
 
 	f, err := getFileDetails(*url)
 	if err != nil {
@@ -58,4 +52,10 @@ func main() {
 	downloadFile(ctx, chunkSize, remainder, errs, f)
 
 	fmt.Printf("Time elapsed: %.2f seconds. \n", time.Since(start).Seconds())
+}
+
+func handleErrors(errs <-chan error) {
+	for err := range errs {
+		fmt.Println(err.Error())
+	}
 }
