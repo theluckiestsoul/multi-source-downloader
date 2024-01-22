@@ -177,7 +177,7 @@ func TestCleanupFilesSuccess(t *testing.T) {
 		}
 	}()
 
-	_ = <-done
+	<-done
 	close(done)
 
 	for _, file := range fileNames {
