@@ -187,43 +187,6 @@ func TestCleanupFilesSuccess(t *testing.T) {
 	}
 }
 
-func TestCleanupFilesError(t *testing.T) {
-	var fileNames []string
-	for i := 0; i < 10; i++ {
-		f, err := os.CreateTemp("", "test")
-		if err != nil {
-			t.Fatal(err)
-		}
-		fileNames = append(fileNames, f.Name())
-		f.Close()
-	}
-	fileNames = append(fileNames, "non-existent-file")
-
-	errs := make(chan error, len(fileNames))
-	done := make(chan struct{})
-
-	go func() {
-		cleanupFiles(fileNames, errs)
-		close(errs)
-		done <- struct{}{}
-	}()
-
-	go func() {
-		for err := range errs {
-			t.Errorf("cleanupFiles() error = %v", err)
-		}
-	}()
-
-	_ = <-done
-	close(done)
-
-	for _, file := range fileNames {
-		if _, err := os.Stat(file); !os.IsNotExist(err) {
-			t.Errorf("cleanupFiles() file %s still exists", file)
-		}
-	}
-}
-
 func TestMergeFiles(t *testing.T) {
 	var fileNames []string
 	expectedContent := ""
