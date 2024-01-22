@@ -49,6 +49,8 @@ The following URLs can be used to test the downloader:
 > [!NOTE]  
 > Currently, the downloader only supports downloading files from a single source. The file is downloaded in chunks from the same source. The downloader does not support downloading a single file in chunks from multiple sources.
 
+> [!IMPORTANT] 
 > The downloader stores the downloaded file in the current working directory. By default the file uses the name provided in the `Content-Disposition` header. If the header is not present, the file is saved with a random name.
 
+> [!WARNING] 
 > The `Etag` header verification is not implemented.
