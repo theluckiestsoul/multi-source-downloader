@@ -43,8 +43,8 @@ func main() {
 	}
 
 	if f.name == "" {
-		fmt.Println("File name not found in Content-Disposition header. Proceeding with default file name.")
-		f.name = generateRandomFileName()
+		f.name = generateRandomFileName(f)
+		fmt.Printf("File name not found in Content-Disposition header. Proceeding with %s as file name.\n", f.name)
 	}
 
 	if !f.acceptRanges {
@@ -57,5 +57,5 @@ func main() {
 
 	downloadFile(ctx, chunkSize, remainder, errs, f)
 
-	fmt.Printf("Time elapsed: %v\n", time.Since(start).Seconds())
+	fmt.Printf("Time elapsed: %.2f seconds. \n", time.Since(start).Seconds())
 }

@@ -2,7 +2,10 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/jarcoal/httpmock"
@@ -107,5 +110,159 @@ func TestGetFileDetails(t *testing.T) {
 				t.Errorf("getFileDetails() got = %v, want %v", got.acceptRanges, tt.want.acceptRanges)
 			}
 		})
+	}
+}
+
+func TestGenerateRandomFileName(t *testing.T) {
+	tests := []struct {
+		name string
+		file *file
+		want string
+	}{
+		{
+			name: "Should return a bin file extension",
+			file: &file{
+				contentType: "application/octet-stream",
+			},
+			want: ".bin",
+		},
+		{
+			name: "Should return a pdf file extension",
+			file: &file{
+				contentType: "application/pdf",
+			},
+			want: ".pdf",
+		},
+		{
+			name: "Should return a txt file extension",
+			file: &file{
+				contentType: "application/json",
+			},
+			want: ".json",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			n := generateRandomFileName(tt.file)
+			if filepath.Ext(n) != tt.want {
+				t.Errorf("generateRandomFileName() got = %v, want %v", filepath.Ext(n), tt.want)
+			}
+		})
+	}
+}
+
+func TestCleanupFilesSuccess(t *testing.T) {
+	var fileNames []string
+	for i := 0; i < 10; i++ {
+		f, err := os.CreateTemp("", "test")
+		if err != nil {
+			t.Fatal(err)
+		}
+		fileNames = append(fileNames, f.Name())
+		f.Close()
+	}
+
+	errs := make(chan error, len(fileNames))
+	done := make(chan struct{})
+
+	go func() {
+		cleanupFiles(fileNames, errs)
+		close(errs)
+		done <- struct{}{}
+	}()
+
+	go func() {
+		for err := range errs {
+			t.Errorf("cleanupFiles() error = %v", err)
+		}
+	}()
+
+	_ = <-done
+	close(done)
+
+	for _, file := range fileNames {
+		if _, err := os.Stat(file); !os.IsNotExist(err) {
+			t.Errorf("cleanupFiles() file %s still exists", file)
+		}
+	}
+}
+
+func TestCleanupFilesError(t *testing.T) {
+	var fileNames []string
+	for i := 0; i < 10; i++ {
+		f, err := os.CreateTemp("", "test")
+		if err != nil {
+			t.Fatal(err)
+		}
+		fileNames = append(fileNames, f.Name())
+		f.Close()
+	}
+	fileNames = append(fileNames, "non-existent-file")
+
+	errs := make(chan error, len(fileNames))
+	done := make(chan struct{})
+
+	go func() {
+		cleanupFiles(fileNames, errs)
+		close(errs)
+		done <- struct{}{}
+	}()
+
+	go func() {
+		for err := range errs {
+			t.Errorf("cleanupFiles() error = %v", err)
+		}
+	}()
+
+	_ = <-done
+	close(done)
+
+	for _, file := range fileNames {
+		if _, err := os.Stat(file); !os.IsNotExist(err) {
+			t.Errorf("cleanupFiles() file %s still exists", file)
+		}
+	}
+}
+
+func TestMergeFiles(t *testing.T) {
+	var fileNames []string
+	expectedContent := ""
+
+	for i := 0; i < 11; i++ {
+		f, err := os.CreateTemp("", "test")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		fileNames = append(fileNames, f.Name())
+
+		content := fmt.Sprintf("%d", i)
+		_, err = f.WriteString(content)
+		if err != nil {
+			t.Fatal(err)
+		}
+		expectedContent += content
+		f.Close()
+	}
+
+	dst, err := os.CreateTemp("", "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dst.Close()
+
+	err = mergeFiles(dst.Name(), fileNames)
+	if err != nil {
+		t.Errorf("mergeFiles() error = %v", err)
+	}
+
+	//check destination file content
+	content, err := os.ReadFile(dst.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if string(content) != expectedContent {
+		t.Errorf("mergeFiles() got = %v, want %v", string(content), expectedContent)
 	}
 }

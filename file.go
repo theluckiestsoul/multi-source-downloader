@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"os"
 	"strconv"
@@ -24,6 +25,7 @@ type (
 		size         int
 		etag         string
 		acceptRanges bool
+		contentType  string
 	}
 )
 
@@ -82,7 +84,7 @@ func downloadFile(ctx context.Context, chunkSize int, remainder int, errs chan e
 }
 
 func getFileDetails(url string) (*file, error) {
-	resp, err := http.Head(url)
+	resp, err := client.Head(url)
 	if err != nil {
 		return nil, err
 	}
@@ -104,25 +106,27 @@ func getFileDetails(url string) (*file, error) {
 
 	acceptRanges := resp.Header.Get("Accept-Ranges") == "bytes"
 
+	ct := resp.Header.Get("Content-Type")
+
 	f := &file{
 		name:         filename,
 		size:         size,
 		etag:         etag,
 		acceptRanges: acceptRanges,
+		contentType:  ct,
 	}
 
 	return f, nil
 }
 
 func downloadChunk(ctx context.Context, url string, start, end int) (string, error) {
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return "", err
 	}
 
 	rangeHeader := fmt.Sprintf("bytes=%d-%d", start, end)
 	req.Header.Add("Range", rangeHeader)
-	req = req.WithContext(ctx)
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -130,10 +134,10 @@ func downloadChunk(ctx context.Context, url string, start, end int) (string, err
 	}
 	defer resp.Body.Close()
 
-	return writeToFile(resp.Body)
+	return saveChunk(resp.Body)
 }
 
-func writeToFile(body io.ReadCloser) (string, error) {
+func saveChunk(body io.ReadCloser) (string, error) {
 	tmpFile, err := os.CreateTemp("", "chunk")
 	if err != nil {
 		return "", err
@@ -148,19 +152,26 @@ func writeToFile(body io.ReadCloser) (string, error) {
 	return tmpFile.Name(), nil
 }
 
-func mergeFiles(fileName string, fileNames []string) error {
-	file, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY, 0644)
+func mergeFiles(dst string, src []string) error {
+	file, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 
-	for _, tmpFileName := range fileNames {
+	closers := make([]io.Closer, 0, len(src))
+	defer func() {
+		for _, closer := range closers {
+			closer.Close()
+		}
+	}()
+
+	for _, tmpFileName := range src {
 		tmpFile, err := os.OpenFile(tmpFileName, os.O_RDONLY, 0644)
 		if err != nil {
 			return err
 		}
-		defer tmpFile.Close()
+		closers = append(closers, tmpFile)
 
 		_, err = io.Copy(file, tmpFile)
 		if err != nil {
@@ -184,6 +195,10 @@ func cleanupFiles(files []string, errs chan error) {
 	}
 }
 
-func generateRandomFileName() string {
-	return fmt.Sprintf("%d", time.Now().UnixNano())
+func generateRandomFileName(f *file) string {
+	ext, err := mime.ExtensionsByType(f.contentType)
+	if err != nil || len(ext) == 0 {
+		return fmt.Sprintf("%d", time.Now().UnixNano())
+	}
+	return fmt.Sprintf("%d", time.Now().UnixNano()) + ext[0]
 }

@@ -16,3 +16,8 @@ test:
 	go test -race -v ./...
 	@echo "Done!"
 .PHONY: test
+
+clean:
+	@echo "Cleaning..."
+	go clean
+	@echo "Done!"
