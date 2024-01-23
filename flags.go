@@ -20,7 +20,6 @@ func parseFlags() {
 Options:
     - url: file url to download (required)
     - chunks: number of chunks to download concurrently (default %d)
-    - verify: verify file integrity (default false)
 `
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, usage, getVersion(), *numberOfChunks)
